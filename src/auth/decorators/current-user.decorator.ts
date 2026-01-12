@@ -1,4 +1,8 @@
-import { createParamDecorator, ExecutionContext } from "@nestjs/common";
+import {
+  createParamDecorator,
+  ExecutionContext,
+  UnauthorizedException,
+} from "@nestjs/common";
 
 /**
  * 👤 Current User Decorator
@@ -36,20 +40,18 @@ import { createParamDecorator, ExecutionContext } from "@nestjs/common";
  */
 export const CurrentUser = createParamDecorator(
   (data: string | undefined, context: ExecutionContext) => {
-    // 📦 Extrai o objeto request do contexto HTTP
     const request = context.switchToHttp().getRequest();
 
-    // 👤 Pega o usuário do request (anexado pela JwtStrategy)
     const user = request.user;
 
-    // 🎯 Se data foi especificado, retorna apenas essa propriedade
-    // Exemplo: @CurrentUser('email') => retorna apenas user.email
+    if (!user) {
+      throw new UnauthorizedException("JWT inválido ou ausente.");
+    }
+
     if (data) {
       return user?.[data];
     }
 
-    // 📦 Se data não foi especificado, retorna o usuário completo
-    // Exemplo: @CurrentUser() => retorna { userId, email, role }
     return user;
   }
 );

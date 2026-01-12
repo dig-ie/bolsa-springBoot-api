@@ -3,7 +3,6 @@ import { JwtService } from "@nestjs/jwt";
 import { UsersService } from "../users/users.service";
 import * as bcrypt from "bcryptjs";
 
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -28,7 +27,7 @@ export class AuthService {
     const user = await this.validateUser(email, password);
 
     if (!user) {
-      throw new UnauthorizedException("Credenciais inválidas");
+      throw new UnauthorizedException("Email ou senha incorretos");
     }
 
     const payload = {

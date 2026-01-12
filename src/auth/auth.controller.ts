@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Res } from "@nestjs/common";
+import { Controller, Post, Body, Get, Res, HttpCode } from "@nestjs/common";
 import { type Response } from "express";
 import {
   ApiBadRequestResponse,
@@ -12,7 +12,7 @@ import {
 import { AuthService } from "./auth.service";
 import { LoginDto } from "./dto/login.dto";
 import { Public } from "./decorators/public.decorator";
-import { CurrentUser } from "./decorators/current-user.decorator";
+// import { CurrentUser } from "./decorators/current-user.decorator";
 
 @ApiTags("Auth")
 @Controller("auth")
@@ -21,6 +21,7 @@ export class AuthController {
 
   @Public()
   @Post("login")
+  @HttpCode(200)
   @ApiOperation({
     summary: "Realiza login com email e senha",
     description:
@@ -32,8 +33,8 @@ export class AuthController {
       exemplo: {
         summary: "Corpo do login",
         value: {
-          email: "user@example.com",
-          password: "123456",
+          email: "admin@bolsa.com",
+          password: "admin123",
         },
       },
     },
@@ -44,7 +45,7 @@ export class AuthController {
       example: {
         user: {
           id: 1,
-          email: "user@example.com",
+          email: "admin@bolsa.com",
           role: "user",
         },
       },
@@ -55,7 +56,10 @@ export class AuthController {
     schema: {
       example: {
         statusCode: 400,
-        message: "Forneça um email válido",
+        message: [
+          "email must be an email",
+          "password must be longer than or equal to 3 characters",
+        ],
         error: "Bad Request",
       },
     },
@@ -91,42 +95,42 @@ export class AuthController {
     return { user };
   }
 
-  @Get("profile")
-  @ApiCookieAuth()
-  @ApiOperation({
-    summary: "Retorna dados do usuário autenticado",
-    description: "Endpoint protegido por JWT via cookie httpOnly.",
-  })
-  @ApiOkResponse({
-    description: "Retorna o usuário logado",
-    schema: {
-      example: {
-        message: "Dados do usuário autenticado",
-        user: {
-          id: 1,
-          email: "user@example.com",
-          role: "user",
-        },
-      },
-    },
-  })
-  @ApiUnauthorizedResponse({
-    description: "Token inválido ou ausente",
-    schema: {
-      example: {
-        statusCode: 401,
-        message: "Unauthorized",
-      },
-    },
-  })
-  async getProfile(@CurrentUser() user: any) {
-    return {
-      message: "Dados do usuário autenticado",
-      user: {
-        id: user.userId,
-        email: user.email,
-        role: user.role,
-      },
-    };
-  }
+  // @Get("profile")
+  // @ApiCookieAuth()
+  // @ApiOperation({
+  //   summary: "Retorna dados do usuário autenticado",
+  //   description: "Endpoint protegido por JWT via cookie httpOnly.",
+  // })
+  // @ApiOkResponse({
+  //   description: "Retorna o usuário logado",
+  //   schema: {
+  //     example: {
+  //       message: "Dados do usuário autenticado",
+  //       user: {
+  //         id: 1,
+  //         email: "admin@bolsa.com",
+  //         role: "user",
+  //       },
+  //     },
+  //   },
+  // })
+  // @ApiUnauthorizedResponse({
+  //   description: "Token inválido ou ausente",
+  //   schema: {
+  //     example: {
+  //       statusCode: 401,
+  //       message: "Unauthorized",
+  //     },
+  //   },
+  // })
+  // async getProfile(@CurrentUser() user: any) {
+  //   return {
+  //     message: "Dados do usuário autenticado",
+  //     user: {
+  //       id: user.userId,
+  //       email: user.email,
+  //       role: user.role,
+  //     },
+  //   };
+  // }
 }

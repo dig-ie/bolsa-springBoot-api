@@ -1,81 +1,165 @@
-import { Body, Controller, Post, Get, Param, Delete } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+  Param,
+  Delete,
+  HttpCode,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiBody,
+  ApiExtraModels,
+  getSchemaPath,
+} from "@nestjs/swagger";
+
 import { UsersService } from "./users.service";
 import { CreateUserDto } from "./dto/create-user.dto";
+import { UserEntity } from "./entities/user.entity";
+
 import { Public } from "../auth/decorators/public.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { CurrentUser } from "../auth/decorators/current-user.decorator";
 
-/**
- * 👥 Users Controller
- *
- * Gerencia usuários da plataforma.
- *
- * NÍVEIS DE ACESSO:
- * - POST /users (registro): Público (qualquer pessoa pode se registrar)
- * - GET /users (listar): Apenas ADMIN
- * - GET /users/me (perfil próprio): Qualquer usuário autenticado
- * - GET /users/:id (perfil específico): Apenas ADMIN
- * - DELETE /users/:id: Apenas ADMIN
- *
- * DEMONSTRAÇÃO DIDÁTICA:
- * Este controller mostra os 3 níveis de acesso:
- * 1. Público (@Public)
- * 2. Autenticado (sem decorator = qualquer role)
- * 3. Restrito por role (@Roles)
- */
+@ApiTags("Users")
+@ApiExtraModels(UserEntity)
 @Controller("users")
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  /**
-   * 🌍 Registrar novo usuário - Rota PÚBLICA
-   * @Public() permite acesso sem autenticação
-   * Necessário para que novos usuários possam se cadastrar
-   */
+  // ------------------------------------------------
+  // 📌 REGISTRAR USUÁRIO (PÚBLICO)
+  // ------------------------------------------------
   @Public()
   @Post()
+  @ApiOperation({
+    summary: "Registrar novo usuário",
+    description: "Cria um novo usuário com role padrão USER.",
+  })
+  @ApiBody({ type: CreateUserDto })
+  @ApiCreatedResponse({
+    description: "Usuário criado com sucesso",
+    schema: { $ref: getSchemaPath(UserEntity) },
+  })
+  @ApiBadRequestResponse({
+    description: "Erro de validação no DTO",
+    schema: {
+      example: {
+        statusCode: 400,
+        message: [
+          "Forneça um email válido",
+          "Senha deve ter no mínimo 6 caracteres",
+          "Nome não pode estar vazio",
+        ],
+        error: "Bad Request",
+      },
+    },
+  })
   async create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
-  /**
-   * 👮 Listar todos os usuários - Apenas ADMIN
-   * Informação sensível que só administradores devem ver
-   */
+  // ------------------------------------------------
+  // 👮 LISTAR TODOS (ADMIN)
+  // ------------------------------------------------
   @Roles("ADMIN")
   @Get()
+  @ApiOperation({
+    summary: "Listar todos os usuários",
+    description: "Apenas administradores podem acessar esta rota.",
+  })
+  @ApiOkResponse({
+    description: "Lista de usuários retornada com sucesso",
+    schema: {
+      type: "array",
+      items: { $ref: getSchemaPath(UserEntity) },
+    },
+  })
+  @ApiUnauthorizedResponse({
+    description: "Token inválido ou ausente",
+  })
+  @ApiForbiddenResponse({
+    description: "Acesso negado — apenas administradores",
+  })
   async findAll(@CurrentUser() admin: any) {
-    console.log(`Admin ${admin.email} está listando todos os usuários`);
     return this.usersService.findAll();
   }
 
-  /**
-   * 👤 Ver próprio perfil - Qualquer usuário autenticado
-   * Sem @Roles() = qualquer role pode acessar
-   * Usa @CurrentUser() para pegar ID do usuário logado
-   */
+  // ------------------------------------------------
+  // 👤 VER PERFIL PRÓPRIO (AUTENTICADO)
+  // ------------------------------------------------
   @Get("me")
+  @ApiOperation({
+    summary: "Obter o próprio perfil",
+  })
+  @ApiOkResponse({
+    description: "Perfil retornado com sucesso",
+    schema: { $ref: getSchemaPath(UserEntity) },
+  })
+  @ApiUnauthorizedResponse({
+    description: "Token inválido ou ausente",
+  })
   async getMyProfile(@CurrentUser("userId") userId: string) {
     return this.usersService.findOne(userId);
   }
 
-  /**
-   * 👮 Ver perfil de outro usuário - Apenas ADMIN
-   * Administradores podem ver perfil de qualquer usuário
-   */
+  // ------------------------------------------------
+  // 👮 VER USUÁRIO ESPECÍFICO (ADMIN)
+  // ------------------------------------------------
   @Roles("ADMIN")
   @Get(":id")
+  @ApiOperation({
+    summary: "Buscar usuário por ID",
+    description: "Apenas administradores podem acessar esta rota.",
+  })
+  @ApiOkResponse({
+    description: "Usuário encontrado",
+    schema: { $ref: getSchemaPath(UserEntity) },
+  })
+  @ApiNotFoundResponse({
+    description: "Usuário não encontrado",
+    schema: {
+      example: {
+        statusCode: 404,
+        message: "Usuário não encontrado",
+        error: "Not Found",
+      },
+    },
+  })
+  @ApiForbiddenResponse({
+    description: "Acesso negado — apenas administradores",
+  })
   async findOne(@Param("id") id: string) {
     return this.usersService.findOne(id);
   }
 
-  /**
-   * 👮 Deletar usuário - Apenas ADMIN
-   */
+  // ------------------------------------------------
+  // 👮 DELETAR USUÁRIO (ADMIN)
+  // ------------------------------------------------
   @Roles("ADMIN")
   @Delete(":id")
+  @ApiOperation({
+    summary: "Deletar usuário",
+    description: "Apenas administradores podem excluir usuários.",
+  })
+  @ApiOkResponse({
+    description: "Usuário deletado com sucesso",
+  })
+  @ApiNotFoundResponse({
+    description: "Usuário não encontrado",
+  })
+  @ApiForbiddenResponse({
+    description: "Acesso negado — apenas administradores",
+  })
   async remove(@Param("id") id: string, @CurrentUser() admin: any) {
-    console.log(`Admin ${admin.email} está deletando usuário ${id}`);
     return this.usersService.remove(id);
   }
 }
